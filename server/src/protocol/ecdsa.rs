@@ -1,4 +1,4 @@
-use super::super::{Result, StateChainEntity};
+use super::super::Result;
 
 use crate::error::{DBErrorType, SEError};
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
         Column,
         Table,
     },
-    //DatabaseR, DatabaseW,
+    //DatabaseR, DatabaseW,server::StateChainEntity
     Database
 };
 use shared_lib::{

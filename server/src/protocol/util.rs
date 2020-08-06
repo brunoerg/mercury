@@ -4,7 +4,7 @@
 //! utility functions.
 
 use super::{
-    super::{Result, StateChainEntity},
+    super::Result,
     transfer_batch::{transfer_batch_is_ended, BatchTransfer},
 };
 extern crate shared_lib;
@@ -28,6 +28,7 @@ use crate::storage::db::{
     //Column, Table,
 };
 use crate::structs::*;
+use crate::server::StateChainEntity;
 use crate::storage::Storage;
 use crate::Database;
 use cfg_if::cfg_if;
@@ -95,9 +96,9 @@ pub trait Utilities {
 impl Utilities for StateChainEntity {
     fn get_fees(&self) -> Result<StateEntityFeeInfoAPI> {
         Ok(StateEntityFeeInfoAPI {
-            address: self.fee_address.clone(),
-            deposit: self.fee_deposit,
-            withdraw: self.fee_withdraw,
+            address: self.config.fee_address.clone(),
+            deposit: self.config.fee_deposit,
+            withdraw: self.config.fee_withdraw,
         })
     }
 
@@ -124,7 +125,7 @@ impl Utilities for StateChainEntity {
         }
 
         Ok(gen_proof_smt(
-            &self.smt_db_loc,
+            &self.config.smt_db_loc,
             &Some(smt_proof_msg.root.hash()),
             &smt_proof_msg.funding_txid,
         )?)
@@ -150,7 +151,7 @@ impl Utilities for StateChainEntity {
                 }
 
                 // Verify unsigned withdraw tx to ensure co-sign will be signing the correct data
-                tx_withdraw_verify(&prepare_sign_msg, &self.fee_address, &self.fee_withdraw)?;
+                tx_withdraw_verify(&prepare_sign_msg, &self.config.fee_address, &self.config.fee_withdraw)?;
 
                 let tx_backup = self.database.get_backup_transaction(user_id)?;
 
@@ -176,7 +177,7 @@ impl Utilities for StateChainEntity {
                     &0,
                     &prepare_sign_msg.input_addrs[0],
                     &prepare_sign_msg.input_amounts[0],
-                    &self.network,
+                    &self.config.network,
                 );
 
                 self.database.update_withdraw_tx_sighash(&user_id, sig_hash, prepare_sign_msg.tx)?;
@@ -195,7 +196,7 @@ impl Utilities for StateChainEntity {
                     &0,
                     &prepare_sign_msg.input_addrs[0],
                     &prepare_sign_msg.input_amounts[0],
-                    &self.network,
+                    &self.config.network,
                 );
 
                 self.database.update_sighash(&user_id, sig_hash);
@@ -217,7 +218,7 @@ impl Utilities for StateChainEntity {
     }
 }
 
-#[post("/info/fee", format = "json")]
+#[get("/info/fee", format = "json")]
 pub fn get_fees(sc_entity: State<StateChainEntity>) -> Result<Json<StateEntityFeeInfoAPI>> {
     match sc_entity.get_fees() {
         Ok(res) => return Ok(Json(res)),
@@ -225,7 +226,7 @@ pub fn get_fees(sc_entity: State<StateChainEntity>) -> Result<Json<StateEntityFe
     }
 }
 
-#[post("/info/statechain/<state_chain_id>", format = "json")]
+#[get("/info/statechain/<state_chain_id>", format = "json")]
 pub fn get_statechain(
     sc_entity: State<StateChainEntity>,
     state_chain_id: String,
@@ -236,38 +237,39 @@ pub fn get_statechain(
     }
 }
 
+#[get("/info/root", format = "json")]
+pub fn get_smt_root(
+    sc_entity: State<StateChainEntity>,
+) -> Result<Json<Option<Root>>> {    
+match sc_entity.get_smt_root() {
+        Ok(res) => return Ok(Json(res)),
+        Err(e) => return Err(e),
+    }
+}
+
+#[get("/info/confirmed_root", format = "json")]
+pub fn get_confirmed_smt_root(
+    sc_entity: State<StateChainEntity>
+) -> Result<Json<Option<Root>>> {
+    match sc_entity.get_confirmed_smt_root(){
+        Ok(res) => return Ok(Json(res)),
+        Err(e) => return Err(e),
+    }
+}
+
 #[post("/info/proof", format = "json", data = "<smt_proof_msg>")]
 pub fn get_smt_proof(
     sc_entity: State<StateChainEntity>,
-    smt_proof_msg: Json<SmtProofMsgAPI>,
+ smt_proof_msg: Json<SmtProofMsgAPI>
 ) -> Result<Json<Option<Proof>>> {
-    match sc_entity.get_smt_proof(smt_proof_msg.into_inner()) {
+match sc_entity.get_smt_proof(smt_proof_msg.into_inner()){
         Ok(res) => return Ok(Json(res)),
         Err(e) => return Err(e),
     }
 }
 
-#[post("/info/root", format = "json")]
-pub fn get_smt_root(
-    sc_entity: State<StateChainEntity>
-) -> Result<Json<Option<Root>>> {
-    match sc_entity.get_smt_root() {
-        Ok(res) => return Ok(Json(res)),
-        Err(e) => return Err(e),
-    }
-}
 
-#[post("/info/confirmed_root", format = "json")]
-pub fn get_confirmed_smt_root(
-    sc_entity: State<StateChainEntity>,
-) -> Result<Json<Option<Root>>> {
-    match sc_entity.get_confirmed_smt_root() {
-        Ok(res) => return Ok(Json(res)),
-        Err(e) => return Err(e),
-    }
-}
-
-#[post("/info/transfer-batch/<batch_id>", format = "json")]
+#[get("/info/transfer-batch/<batch_id>", format = "json")]
 pub fn get_transfer_batch_status(
     sc_entity: State<StateChainEntity>,
     batch_id: String,
@@ -294,10 +296,10 @@ impl StateChainEntity {
     /// Query an Electrum Server for a transaction's confirmation status.
     /// Return Ok() if confirmed or Error if not after some waiting period.
     pub fn verify_tx_confirmed(&self, txid: &String, sc_entity: &StateChainEntity) -> Result<()> {
-        let mut electrum: Box<dyn Electrumx> = if sc_entity.testing_mode {
+        let mut electrum: Box<dyn Electrumx> = if sc_entity.config.testing_mode {
             Box::new(MockElectrum::new())
         } else {
-            Box::new(ElectrumxClient::new(sc_entity.electrum_server.clone()).unwrap())
+            Box::new(ElectrumxClient::new(sc_entity.config.electrum_server.clone()).unwrap())
         };
 
         info!(
@@ -318,20 +320,20 @@ impl StateChainEntity {
                             warn!("Funding transaction not mined after 10 blocks. Deposit failed. Txid: {}", txid);
                             return Err(SEError::Generic(String::from("Funding transaction failure to be mined - consider increasing the fee. Deposit failed.")));
                         }
-                        thread::sleep(Duration::from_millis(sc_entity.block_time));
+                        thread::sleep(Duration::from_millis(sc_entity.config.block_time));
                     } else {
                         // If confs increase then wait 6*(block time) and return Ok()
                         info!(
                             "Funding transaction mined. Waiting for 6 blocks confirmation. Txid: {}",
                             txid
                         );
-                        thread::sleep(Duration::from_millis(6 * sc_entity.block_time));
+                        thread::sleep(Duration::from_millis(6 * sc_entity.config.block_time));
                         return Ok(());
                     }
                 }
                 Err(_) => {
                     is_broadcast += 1;
-                    thread::sleep(Duration::from_millis(sc_entity.block_time));
+                    thread::sleep(Duration::from_millis(sc_entity.config.block_time));
                 }
             }
         }
@@ -358,7 +360,7 @@ impl StateChainEntity {
 
         info!(
             "PUNISHMENT: State Chain ID: {} locked for {}s.",
-            state_chain_id, self.punishment_duration
+            state_chain_id, self.config.punishment_duration
         );
         Ok(())
     }
@@ -485,7 +487,7 @@ impl Storage for StateChainEntity {
         //If mocked out current_root will be randomly chosen
         let current_root = db.get_root(db.root_get_current_id()?)?;
         let new_root_hash = update_statechain_smt(
-            &self.smt_db_loc,
+            &self.config.smt_db_loc,
             &current_root.clone().map(|r| r.hash()),
             funding_txid,
             proof_key,

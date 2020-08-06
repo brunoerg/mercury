@@ -18,13 +18,13 @@ use crate::{
     DatabaseR, DatabaseW, Database, PGDatabase,
     structs::*, 
 };
-use rocket_contrib::databases::postgres::{rows::Row, types::ToSql};
-use shared_lib::mainstay;
 use mainstay::{Attestable, CommitmentInfo};
-use shared_lib::{Root, structs::*, state_chain::*};
-use uuid::Uuid;
 #[cfg(test)]
 use mockito::{mock, Matcher, Mock};
+use rocket_contrib::databases::postgres::{rows::Row, types::ToSql};
+use shared_lib::mainstay;
+use shared_lib::{Root, structs::*, state_chain::*};
+use uuid::Uuid;
 use rocket_contrib::databases::r2d2;
 use crate::server::get_postgres_url;
 use crate::protocol::transfer::TransferFinalizeData;
@@ -823,7 +823,6 @@ fn update_statechain_id(&self, user_id: &Uuid, state_chain_id: &Uuid)
         vec![state_chain_id],
     )
 }
-
 fn get_statechain_amount(
     &self,
     state_chain_id: Uuid,
@@ -844,6 +843,7 @@ fn update_statechain_amount(&self, state_chain_id: &Uuid, state_chain: StateChai
         vec![Column::Chain, Column::Amount],
         vec![&Self::ser(state_chain)?, &(amount as i64)], // signals withdrawn funds
     )
+                )
 }
 
 fn create_statechain(&self, 
@@ -896,7 +896,6 @@ fn update_statechain_owner(&self, state_chain_id: &Uuid,
         ],
     )
 }
-
  // Remove state_chain_id from user session to signal end of session
 fn remove_statechain_id(&self, user_id: &Uuid) -> Result<()> {
     self.update(
@@ -906,7 +905,6 @@ fn remove_statechain_id(&self, user_id: &Uuid) -> Result<()> {
         vec![&Uuid::nil()],
     )
 }
-
 fn create_backup_transaction(&self, 
     state_chain_id: &Uuid,
     tx_backup: &Transaction) -> Result<()> {
@@ -918,7 +916,6 @@ fn create_backup_transaction(&self,
             vec![&Self::ser(tx_backup.clone())?],
         )
 }
-
 fn get_backup_transaction(&self, state_chain_id: Uuid) -> Result<Transaction> {
     let (tx_backup_str) = self.get_1::<String>(
         state_chain_id,
@@ -1136,7 +1133,6 @@ fn get_backup_transaction_and_proof_key(&self, user_id: Uuid)
         )?;
         Ok(())
     }
-
     fn update_keygen_third_msg(&self, 
         user_id: &Uuid,
         party_one_pdl_decommit: party_one::PDLdecommit,
@@ -1222,9 +1218,7 @@ fn get_backup_transaction_and_proof_key(&self, user_id: Uuid)
             Table::TransferBatch,
             vec![Column::PunishedStateChains],
             vec![&Self::ser(punished_state_chains)?],
-        )
     }
-
     fn get_finalize_batch_data(&self, batch_id: Uuid)-> Result<TransferFinalizeBatchData> {
         let (state_chains_str, finalized_data_vec_str, start_time) = self.get_3::<String, String, NaiveDateTime>(
             batch_id,
@@ -1284,9 +1278,6 @@ fn get_backup_transaction_and_proof_key(&self, user_id: Uuid)
                 ],
             )
     }
-
-
-
     // Create new UserSession to allow new owner to generate shared wallet
     fn transfer_init_user_session(&self, new_user_id: &Uuid,
         state_chain_id: &Uuid, 
@@ -1383,5 +1374,4 @@ fn get_backup_transaction_and_proof_key(&self, user_id: Uuid)
             vec![Column::TxWithdraw],
             vec![&Self::ser(tx)?],
         )
-    }
 }

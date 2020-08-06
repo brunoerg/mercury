@@ -3,7 +3,7 @@
 //! StateEntity Transfer protocol trait and implementation.
 
 use super::{
-    super::{Result, StateChainEntity},
+    super::Result,
     transfer_batch::transfer_batch_is_ended,
 };
 
@@ -17,6 +17,7 @@ use crate::error::SEError;
     //},
     //DatabaseR, DatabaseW,
 //};
+use crate::server::StateChainEntity;
 use crate::storage::db;
 use crate::Database;
 use shared_lib::{state_chain::*, structs::*};
@@ -201,7 +202,7 @@ impl Transfer for StateChainEntity {
             let mut tbd = self.database.get_finalize_batch_data(batch_id)?;
 
             // Ensure batch transfer is still active
-            if transfer_batch_is_ended(tbd.start_time, self.batch_lifetime as i64) {
+if transfer_batch_is_ended(tbd.start_time, self.config.batch_lifetime as i64) {
                 return Err(SEError::Generic(String::from(
                     "Transfer batch ended. Too late to complete transfer.",
                 )));

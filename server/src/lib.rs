@@ -6,7 +6,7 @@ extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
 extern crate chrono;
-extern crate config;
+extern crate config as config_rs;
 extern crate curv;
 extern crate kms;
 extern crate multi_party_ecdsa;
@@ -38,17 +38,16 @@ extern crate serde_dynamodb;
 
 extern crate hex;
 extern crate shared_lib;
-use shared_lib::mainstay;
 
 #[cfg(test)]
 #[macro_use]
 extern crate serial_test;
 
 pub mod error;
+pub mod config;
 pub mod protocol;
 pub mod server;
 pub mod storage;
-pub mod tests;
 
 use rocket_contrib::databases::r2d2_postgres::{PostgresConnectionManager, TlsMode};
 use rocket_contrib::databases::r2d2;
@@ -82,21 +81,6 @@ pub struct DatabaseR(postgres::Connection);
 
 pub struct PGDatabase {
     pub db_connection: fn()->r2d2::PooledConnection<PostgresConnectionManager>
-}
-
-pub struct StateChainEntity {
-    pub electrum_server: String,
-    pub network: String,
-    pub testing_mode: bool,  // set for testing mode
-    pub fee_address: String, // receive address for fee payments
-    pub fee_deposit: u64,    // satoshis
-    pub fee_withdraw: u64,   // satoshis
-    pub block_time: u64,
-    pub batch_lifetime: u64,
-    pub punishment_duration: u64,
-    pub mainstay_config: Option<mainstay::Config>,
-    pub smt_db_loc: String,
-    pub database: PGDatabase
 }
 
 use structs::*;
@@ -275,5 +259,4 @@ pub mod structs {
         pub eph_ec_key_pair_party1: party_one::EphEcKeyPair,
         pub eph_key_gen_first_message_party_two: party_two::EphKeyGenFirstMsg,
     }
-    
 }
