@@ -102,13 +102,6 @@ pub trait Conductor {
     // StateChain they own and should not take any responsibility for the failure.
 }
 
-#[allow(dead_code)]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, Copy)]
-pub enum SwapStatus {
-    Phase1,
-    Phase2,
-    Phase3,
-}
 
 /// Struct defines a Swap. This is signed by each participant as agreement to take part in the swap.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -143,13 +136,6 @@ impl SwapToken {
             Err(e) => Err(SEError::SwapError(format!("signature does not sign for token: {}",e)))
         }
     }
-}
-
-#[allow(dead_code)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SwapInfo {
-    status: SwapStatus,
-    swap_token: SwapToken,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

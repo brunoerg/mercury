@@ -282,6 +282,21 @@ pub struct WithdrawMsg2 {
 
 // Swaps
 
+#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub enum SwapStatus {
+    Phase1,
+    Phase2,
+    Phase3,
+}
+
+#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SwapInfo {
+    status: SwapStatus,
+    swap_token: SwapToken,
+}
+
 /// Owner -> Conductor
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RegisterUtxo {
