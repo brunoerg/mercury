@@ -184,6 +184,7 @@ pub mod tests {
     }
 
     #[test]
+    #[ignore]
     #[serial]
     fn test_monotree_postgres_tree() {
         let mut tree = get_monotree_postgres_tree();
@@ -207,6 +208,7 @@ pub mod tests {
     }
 
     #[test]
+    #[ignore]
     #[serial]
     fn test_batch_monotree_postgres_tree() {
         let mut tree = get_monotree_postgres_tree();
